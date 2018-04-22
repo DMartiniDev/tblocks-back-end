@@ -5,11 +5,12 @@ const io = require('socket.io')(http);
 const socketsLogic = require('./sockets_logic.js');
 
 io.on('connection', (socket) => {
+  socketsLogic.allPlayers.push(socket.id);
 
-  console.log(`The following socket has been connected: ${socket.id}`);
-
-  socket.nsp.to(socket.id).emit('broadcast seeks', socketsLogic.seeks);
-  socket.nsp.to(socket.id).emit('connectionID', socket.id);
+  for (const currentPlayer of socketsLogic.allPlayers) {
+    // Broadcast the player count to all players online
+    socket.nsp.to(currentPlayer).emit('players online', socketsLogic.allPlayers.length);
+  }
 
   socket.on('disconnect', () => socketsLogic.disconnect(socket));
 });
