@@ -10,6 +10,8 @@ io.on('connection', (socket) => {
 
   socket.nsp.to(socket.id).emit('broadcast seeks', socketsLogic.seeks);
   socket.nsp.to(socket.id).emit('connectionID', socket.id);
+
+  socket.on('disconnect', () => socketsLogic.disconnect(socket));
 });
 
 http.listen(port, () => console.log(`Listening on port ${port}`));
