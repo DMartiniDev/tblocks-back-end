@@ -12,6 +12,10 @@ io.on('connection', (socket) => {
     socket.nsp.to(currentPlayer).emit('players online', socketsLogic.allPlayers.length);
   }
 
+  socket.on('makePlayerAvailable', (name) => {
+    socketsLogic.makePlayerAvailable(socket, name);
+  });
+
   socket.on('disconnect', () => socketsLogic.disconnect(socket));
 });
 
