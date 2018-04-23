@@ -28,6 +28,7 @@ exports.disconnect = (socket) => {
     availablePlayers.splice(Number(indexToDelete), 1);
   }
 
+  console.log('Available Players:');
   console.log(JSON.stringify(availablePlayers, null, 4));
 
   allPlayers.splice(allPlayers.indexOf(socket.id), 1);
@@ -40,13 +41,26 @@ exports.disconnect = (socket) => {
 };
 
 exports.makePlayerAvailable = (socket, name) => {
-  availablePlayers.push({
+  const newPlayer = {
     id: socket.id,
     name: name,
     board: null
-  });
+  };
+
+  if (availablePlayers.length === 0) {
+    availablePlayers.push(newPlayer);
+    // Now that the user has been made available, update the client
+    socket.nsp.to(socket.id).emit('updateClient', 'wait');
+  } else {
+    let opponent = availablePlayers.splice(0, 1)[0];
+    console.log('Oponent:', opponent);
+
+    socket.nsp.to(socket.id).emit('updateClient', 'pair');
+    socket.nsp.to(opponent.id).emit('updateClient', 'pair');
+    console.log(`Pairing ${newPlayer.name} with ${opponent.name}`);
+
+  }
+  console.log('Available Players:');
   console.log(JSON.stringify(availablePlayers, null, 4));
 
-  // Now that the user has been made available, update the client
-  socket.nsp.to(socket.id).emit('updateClient', 'wait');
 }
