@@ -1,3 +1,4 @@
+const uuid = require('uuid');
 const allPlayers = [];
 const availablePlayers = [];
 const games = {};
@@ -57,12 +58,20 @@ exports.makePlayerAvailable = (socket, name) => {
     let opponent = availablePlayers.splice(0, 1)[0];
     console.log('Oponent:', opponent);
 
-    socket.nsp.to(socket.id).emit('updateClient', {status:'pair', player: newPlayer, opponent: opponent});
-    socket.nsp.to(opponent.id).emit('updateClient', {status:'pair', player: opponent, opponent: newPlayer});
     console.log(`Pairing ${newPlayer.name} with ${opponent.name}`);
 
+    // Create Game in the server:
+    const gameID = uuid();
+    console.log('Created a new game with the ID:', gameID);
+    games[gameID] = {players: [newPlayer.id, opponent.id]};
+    console.log('List of games:');
+    console.log(JSON.stringify(games, null, 4));
 
+    newPlayer.gameID = gameID;
+    opponent.gameID = gameID;
 
+    socket.nsp.to(socket.id).emit('updateClient', {status:'pair', player: newPlayer, opponent: opponent});
+    socket.nsp.to(opponent.id).emit('updateClient', {status:'pair', player: opponent, opponent: newPlayer});
   }
   console.log('Available Players:');
   console.log(JSON.stringify(availablePlayers, null, 4));
