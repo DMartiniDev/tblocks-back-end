@@ -50,13 +50,13 @@ exports.makePlayerAvailable = (socket, name) => {
   if (availablePlayers.length === 0) {
     availablePlayers.push(newPlayer);
     // Now that the user has been made available, update the client
-    socket.nsp.to(socket.id).emit('updateClient', 'wait');
+    socket.nsp.to(socket.id).emit('updateClient', {status:'wait'});
   } else {
     let opponent = availablePlayers.splice(0, 1)[0];
     console.log('Oponent:', opponent);
 
-    socket.nsp.to(socket.id).emit('updateClient', 'pair');
-    socket.nsp.to(opponent.id).emit('updateClient', 'pair');
+    socket.nsp.to(socket.id).emit('updateClient', {status:'pair'});
+    socket.nsp.to(opponent.id).emit('updateClient', {status:'pair'});
     console.log(`Pairing ${newPlayer.name} with ${opponent.name}`);
 
   }
