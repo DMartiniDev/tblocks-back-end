@@ -1,5 +1,6 @@
 const allPlayers = [];
 const availablePlayers = [];
+const games = {};
 let playerCount = 0;
 module.exports.playerCount = playerCount;
 module.exports.availablePlayers = availablePlayers;
@@ -44,7 +45,8 @@ exports.makePlayerAvailable = (socket, name) => {
   const newPlayer = {
     id: socket.id,
     name: name,
-    board: null
+    board: null,
+    gameID: null
   };
 
   if (availablePlayers.length === 0) {
@@ -58,6 +60,8 @@ exports.makePlayerAvailable = (socket, name) => {
     socket.nsp.to(socket.id).emit('updateClient', {status:'pair', player: newPlayer, opponent: opponent});
     socket.nsp.to(opponent.id).emit('updateClient', {status:'pair', player: opponent, opponent: newPlayer});
     console.log(`Pairing ${newPlayer.name} with ${opponent.name}`);
+
+
 
   }
   console.log('Available Players:');
