@@ -16,6 +16,11 @@ io.on('connection', (socket) => {
     socketsLogic.makePlayerAvailable(socket, name);
   });
 
+  socket.on('keyPressed', (data) => {
+    socketsLogic.keyPressed(data);
+  });
+
+
   socket.on('disconnect', () => socketsLogic.disconnect(socket));
 });
 

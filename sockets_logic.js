@@ -33,6 +33,29 @@ exports.disconnect = (socket) => {
 
 };
 
+exports.keyPressed = (data) => {
+  const gameID = data.player.gameID;
+  const userID = data.player.id;
+
+  const boardIndex = games[gameID].players.indexOf(userID);
+  const board = games[gameID].boards[boardIndex];
+  if (data.key === 'left') {
+    board.playerMove(-1);
+  }
+  if (data.key === 'right') {
+    board.playerMove(1);
+  }
+  if (data.key === 'up') {
+    board.playerRotate(1);
+  }
+  if (data.key === 'down') {
+    board.playerDrop();
+  }
+  if (data.key === 'spacebar') {
+    board.playerDropToBottom();
+  }
+}
+
 exports.makePlayerAvailable = (socket, name) => {
   const newPlayer = {
     id: socket.id,
@@ -106,7 +129,8 @@ class TeltrisGame {
     }
 
     this.dropCounter = 0;
-    this.dropInterval = 85;
+    this.dropInterval = 1000;
+    this.updateInterval = null;
     this.lastTime = 0;
 
     // ------ Initialisation ------
@@ -139,6 +163,12 @@ class TeltrisGame {
     arenaSweep(this.arena, this.player);
   }
 
+  emitBoardStatus() {
+    for (const currentClient of games[this.gameID].players) {
+      this.socket.nsp.to(currentClient).emit('updateBoard', {board: this.arena, player:this.player, playerID: this.playerID});
+    }
+  }
+
   playerDrop() {
     this.player.pos.y++;
     if (collide(this.arena, this.player)) {
@@ -148,6 +178,7 @@ class TeltrisGame {
       arenaSweep(this.arena, this.player);
     }
     this.dropCounter = 0;
+    this.emitBoardStatus();
   }
 
   playerDropToBottom() {
@@ -160,6 +191,7 @@ class TeltrisGame {
     this.playerReset();
     arenaSweep(this.arena, this.player);
     this.dropCounter = 0;
+    this.emitBoardStatus();
   }
 
   playerReset() {
@@ -171,29 +203,63 @@ class TeltrisGame {
     if (collide(this.arena, this.player)) {
       // Get the name of the player who lost
       let loser;
-      for (let z = 0; z < availablePlayers.length; z++) {
-        const currentPlayer = availablePlayers[z];
-        if (currentPlayer.id === this.playerID) {
-          loser = currentPlayer.name;
+      for (let z = 0; z < games[this.gameID].players.length; z++) {
+        const currentPlayer = games[this.gameID].players[z];
+        if (currentPlayer === this.playerID) {
+          loser = currentPlayer;
         }
       }
 
       for (const currentClient of games[this.gameID].players) {
-        this.socket.nsp.to(currentClient).emit('finishGame', {loser: loser});
+        if (currentClient === loser) {
+          this.socket.nsp.to(currentClient).emit('finishGame', 'You lost');
+        } else {
+          this.socket.nsp.to(currentClient).emit('finishGame', 'You won');
+        }
+
       }
+      clearInterval(this.updateInterval);
       // this.player.score = 0;
       // this.updateScore();
     }
   }
 
   update() {
-    setInterval(() => {
+    this.updateInterval = setInterval(() => {
       this.playerDrop();
       for (const currentClient of games[this.gameID].players) {
         this.socket.nsp.to(currentClient).emit('updateBoard', {board: this.arena, player:this.player, playerID: this.playerID});
       }
     }, this.dropInterval)
   }
+
+  playerMove (direction) {
+    this.player.pos.x += direction;
+
+    if(collide(this.arena, this.player)) {
+      this.player.pos.x -= direction;
+    }
+    this.emitBoardStatus();
+  }
+
+  playerRotate (dir) {
+    rotate(this.player.matrix, dir);
+    const pos = this.player.pos.x;
+    let offset = 1;
+
+    while (collide(this.arena, this.player)) {
+      this.player.pos.x += offset;
+      offset = -(offset + (offset > 0 ? 1: -1));
+
+      if (offset > this.player.matrix[0].length) {
+        rotate(this.player.matrix, -dir);
+        this.player.pos.x = pos;
+        return;
+      }
+    }
+    this.emitBoardStatus();
+  }
+
 }
 
 
@@ -216,31 +282,6 @@ arenaSweep = (arena, player) => {
     ++y;
 
     player.score += rowCount*10;
-  }
-}
-
-playerMove = (direction, player, arena) => {
-  player.pos.x += direction;
-
-  if(collide(arena, player)) {
-    player.pos.x -= direction;
-  }
-}
-
-playerRotate = (dir, player, arena) => {
-  rotate(player.matrix, dir);
-  const pos = player.pos.x;
-  let offset = 1;
-
-  while (collide(arena, player)) {
-    player.pos.x += offset;
-    offset = -(offset + (offset > 0 ? 1: -1));
-
-    if (offset > player.matrix[0].length) {
-      rotate(player.matrix, -dir);
-      player.pos.x = pos;
-      return;
-    }
   }
 }
 
@@ -282,9 +323,9 @@ collide = (arena, player) => {
 createPiece = (type) => {
   if (type === 'T') {
     return [
-      [1, 1, 1],
-      [0, 1, 0],
       [0, 0, 0],
+      [1, 1, 1],
+      [0, 1, 0]
     ];
   }
 
@@ -362,11 +403,15 @@ createMatrix = (width, height) => {
 }
 
 merge = (arena, player) => {
-  player.matrix.forEach((row, y) => {
-    row.forEach((value, x) => {
-      if(value !== 0) {
-        arena[y + player.pos.y][x + player.pos.x] = value;
-      }
+  try {
+    player.matrix.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if(value !== 0) {
+          arena[y + player.pos.y][x + player.pos.x] = value;
+        }
+      })
     })
-  })
+  } catch (error) {
+    //
+  }
 }
