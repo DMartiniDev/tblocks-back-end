@@ -1,1 +1,1 @@
-Backend for 6-day Codeworks solo project 'Teltris'
+Install dependencies using `npm i`
