@@ -15,7 +15,7 @@ instance of the game alive and send updates to the front-end when needed.
 If you want to run your own version of the back-end, you'll need to do the
 following:
 
-* Clone this wepo
+* Clone this repository
 * Install dependencies using `npm i`
 * Run the server using: `node index.js`
 
